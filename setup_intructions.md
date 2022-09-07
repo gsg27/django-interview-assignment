@@ -20,17 +20,14 @@ python -m pip install -r requirements.txt
 
 <h3>Apply migrations</h3>
 
-<pre>
-python manage.py migrate
-<pre>
+<pre>python manage.py migrate</pre>
+
 <h3>To run the development server</h3>
 
 <h3>Just run this command:</h3>
 
-<pre>
-python manage.py runserver
-</pre>
+<pre>python manage.py runserver</pre>
 
-API available at http://127.0.0.1:8000/api/schema/swagger-ui/
+Test API at http://127.0.0.1:8000/api/schema/swagger-ui/
 
 API documentation available at http://127.0.0.1:8000/api/schema/redoc
