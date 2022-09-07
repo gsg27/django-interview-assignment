@@ -5,7 +5,7 @@ from rest_framework.permissions import AllowAny, IsAuthenticated
 from rest_framework.views import APIView
 from django.contrib.admin.views.decorators import staff_member_required
 
-from .serializer import BookLibrarianSerializer, BookSerializer, UserSerializer,SearchSerializer
+from .serializer import AddMemberSerializer, BookLibrarianSerializer, BookSerializer, MemberSerializer, UserSerializer,SearchSerializer
 from .models import Books, User
 
 
@@ -27,7 +27,7 @@ class MemberList(APIView):
     def get(self, request):
         if request.user.is_librarian:
             users = User.objects.filter(is_member=True)
-            serializer = UserSerializer(users, many=True)
+            serializer = MemberSerializer(users, many=True)
             return Response({"members": serializer.data})
         else:
             return Response(status=401)
@@ -51,6 +51,15 @@ class BookList(APIView):
             return Response({"books": serializer.data})
         else:
             return Response(status=401)
+
+class MemberAdd(CreateAPIView):
+    """
+    Add a member with given details in the system. Only available to Librarians.
+    """
+    queryset = User.objects.all()
+    serializer_class = AddMemberSerializer
+    permission_classes = (IsAuthenticated,)
+
 
 
 class BooksAdd(CreateAPIView):
@@ -143,7 +152,7 @@ class SearchBookList(APIView):
 
 class BorrowBook(APIView):
     """
-    Borrow the book with given id.
+    Borrow the book with given id. Only for members.
     """
     permission_classes = (IsAuthenticated,)
 
@@ -163,7 +172,7 @@ class BorrowBook(APIView):
 
 class ReturnBook(APIView):
     """
-    Return borrowed book with given id.
+    Return borrowed book with given id. Only for members.
     """
     permission_classes = (IsAuthenticated,)
 
@@ -201,7 +210,7 @@ class DeleteMyAccount(APIView):
 
 class BorrowedBooksList(APIView):
     """
-    Return a list of borrowed books.
+    Return a list of borrowed books. Only members can view borrowed books.
     """
     permission_classes= (IsAuthenticated,)
 
@@ -212,6 +221,8 @@ class BorrowedBooksList(APIView):
             books = Books.objects.filter(borrowed_by=request.user)
             serializer = BookSerializer(books, many=True)
             return Response({"books": serializer.data})
+        else:
+            return Response(status=400,data='only members can view borrowed books')
 
 class MembersUpdate(APIView):
     # queryset = Books.objects.all()

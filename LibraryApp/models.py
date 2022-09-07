@@ -14,6 +14,12 @@ class User(AbstractUser):
         elif self.is_member:
             return "Member"
 
+    def __str__(self):
+        return self.username
+
+    def books_borrowed(self):
+        return Books.objects.filter(borrowed_by=self).count()
+
 
 class Books(models.Model):
 
