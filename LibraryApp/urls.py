@@ -6,7 +6,7 @@ from drf_spectacular.views import SpectacularAPIView, SpectacularRedocView, Spec
 
 
 
-from .views import  UserCreate, MemberList, BooksAdd, BookList,BooksUpdate
+from .views import  SearchBookList, UserCreate, MemberList, BooksAdd, BookList,BooksUpdate
 
 urlpatterns = [
     path('schema/', SpectacularAPIView.as_view(), name='schema'),
@@ -24,5 +24,6 @@ urlpatterns = [
     path('books/add',BooksAdd.as_view(),name='add_book'),
     path('books/',BookList.as_view(),name='list_books'),
     path('books/<int:pk>/',BooksUpdate.as_view(),name='update_book'),
+    path('books/search/',SearchBookList.as_view(), name='search_book'),
 
 ]

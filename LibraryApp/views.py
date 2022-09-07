@@ -1,11 +1,11 @@
 from django.shortcuts import render
-from rest_framework.generics import CreateAPIView, DestroyAPIView, RetrieveUpdateDestroyAPIView
+from rest_framework.generics import CreateAPIView
 from rest_framework.response import Response
 from rest_framework.permissions import AllowAny, IsAuthenticated
 from rest_framework.views import APIView
 from django.contrib.admin.views.decorators import staff_member_required
 
-from .serializer import BookLibrarianSerializer, BookSerializer, UserSerializer
+from .serializer import BookLibrarianSerializer, BookSerializer, UserSerializer,SearchSerializer
 from .models import Books, User
 
 
@@ -74,10 +74,43 @@ class BooksAdd(CreateAPIView):
             return Response(status=401)
 
 
-class BooksUpdate(RetrieveUpdateDestroyAPIView):
-    queryset = Books.objects.all()
+class BooksUpdate(APIView):
+    # queryset = Books.objects.all()
     serializer_class = BookSerializer
     permission_classes = (IsAuthenticated,)
+
+    def get(self, request, pk, *args, **kwargs):
+        """
+        Retrieve a book with given id.
+        """
+        try:
+            book = Books.objects.get(pk=pk)
+            if request.user.is_librarian:
+                serializer = BookLibrarianSerializer(book)
+                return Response({'book': serializer.data})
+            elif request.user.is_member:
+                serializer = BookLibrarianSerializer(book)
+                return Response({'book': serializer.data})
+            else:
+                return Response(status=401)
+        except:
+            return Response(status=400)
+
+    def put(self, request, pk, *args, **kwargs):
+        """
+        Update details of a book with given id.
+        """
+        try:
+            if request.user.is_librarian:
+                name = request.data['name']
+                book = Books.objects.get(pk=pk)
+                book.name = name
+                book.save()
+            else:
+                return Response(status=401)
+        except:
+            return Response(status=400)
+
 
     def delete(self, request, pk, format=None):
         """
@@ -93,22 +126,24 @@ class BooksUpdate(RetrieveUpdateDestroyAPIView):
         else:
             return Response(status=401)
 
+
 class SearchBookList(APIView):
     """
-    Returns a list of books.
-    Returns only name and availability of books when requested by members.
+    Returns a list of books matching the search term.
     """
     permission_classes = (IsAuthenticated,)
+    serializer_class = SearchSerializer
 
-    def get(self, request):
+    def post(self, request):
         if request.user.is_librarian:
-            books = Books.objects.all()
+            name = request.data['search']
+            books = Books.objects.filter(name__icontains=name)
             serializer = BookLibrarianSerializer(books, many=True)
             return Response({"books": serializer.data})
-        # elif request.user.is_member:
-        #     books = Books.objects.all()
-        #     serializer = BookSerializer(books, many=True)
-        #     return Response({"books": serializer.data})
+        elif request.user.is_member:
+            name = request.data['search']
+            books = Books.objects.filter(name__icontains=name)
+            serializer = BookSerializer(books, many=True)
+            return Response({"books": serializer.data})
         else:
             return Response(status=401)
-
