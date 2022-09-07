@@ -1,4 +1,5 @@
 Installing
+
 Clone the project
 git clone https://github.com/gsg27/django-interview-assignment.git
 cd django-interview-assignment
