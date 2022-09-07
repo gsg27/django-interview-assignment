@@ -1,4 +1,4 @@
-from django.shortcuts import render
+from django.shortcuts import render, get_object_or_404
 from rest_framework.generics import CreateAPIView
 from rest_framework.response import Response
 from rest_framework.permissions import AllowAny, IsAuthenticated
@@ -83,46 +83,40 @@ class BooksUpdate(APIView):
         """
         Retrieve a book with given id.
         """
-        try:
-            book = Books.objects.get(pk=pk)
-            if request.user.is_librarian:
-                serializer = BookLibrarianSerializer(book)
-                return Response({'book': serializer.data})
-            elif request.user.is_member:
-                serializer = BookSerializer(book)
-                return Response({'book': serializer.data})
-            else:
-                return Response(status=401)
-        except:
-            return Response(status=400)
+
+        book = get_object_or_404(Books,pk=pk)
+
+        if request.user.is_librarian:
+            serializer = BookLibrarianSerializer(book)
+            return Response({'book': serializer.data})
+        elif request.user.is_member:
+            serializer = BookSerializer(book)
+            return Response({'book': serializer.data})
+        else:
+            return Response(status=401)
+        
 
     def put(self, request, pk, *args, **kwargs):
         """
-        Update details of a book with given id.
+        Update details of a book with given id. Only for Librarians.
         """
-        try:
-            if request.user.is_librarian:
-                name = request.data['name']
-                book = Books.objects.get(pk=pk)
-                book.name = name
-                book.save()
-            else:
-                return Response(status=401)
-        except:
-            return Response(status=400)
+
+        if request.user.is_librarian:
+            name = request.data['name']
+            book = get_object_or_404(Books,pk=pk)
+            book.name = name
+            book.save()
+        else:
+            return Response(status=401)
+
 
 
     def delete(self, request, pk, format=None):
         """
-        Delete a book with given id.
+        Delete a book with given id. Only for Librarians.
         """
         if request.user.is_librarian:
-            try:
-                Books.objects.get(pk=pk).delete()
-                return Response(status=200,)
-            except:
-                return Response(status=400)
-
+            get_object_or_404(Books,pk=pk).delete()
         else:
             return Response(status=401)
 
@@ -135,13 +129,12 @@ class SearchBookList(APIView):
     serializer_class = SearchSerializer
 
     def post(self, request):
+        name = request.data['search']
         if request.user.is_librarian:
-            name = request.data['search']
             books = Books.objects.filter(name__icontains=name)
             serializer = BookLibrarianSerializer(books, many=True)
             return Response({"books": serializer.data})
         elif request.user.is_member:
-            name = request.data['search']
             books = Books.objects.filter(name__icontains=name)
             serializer = BookSerializer(books, many=True)
             return Response({"books": serializer.data})
@@ -156,7 +149,7 @@ class BorrowBook(APIView):
 
     def post(self,request,pk):
         if request.user.is_member:
-            book = Books.objects.get(pk=pk)
+            book = get_object_or_404(Books,pk=pk)
             if book.is_borrowed:
                 return Response(data='Book is already borrowed',status=409)
             else:
@@ -164,6 +157,102 @@ class BorrowBook(APIView):
                 book.borrowed_by = request.user
                 book.is_borrowed = True
                 book.save()
-                return Response(status=200)
+                return Response(status=200, data='Book borrowed successfully')
         else:
             return Response(status=401,data='Only members can borrow books')
+
+class ReturnBook(APIView):
+    """
+    Return borrowed book with given id.
+    """
+    permission_classes = (IsAuthenticated,)
+
+    def post(self, request, pk):
+        if request.user.is_member:
+
+            book = get_object_or_404(Books,pk=pk,borrowed_by=request.user)
+            # book = Books.objects.get(pk=pk,borrowed_by=request.user)
+            book.is_borrowed = False
+            book.borrowed_by = None
+            book.save()
+            return Response(status=200, data='Book returned successfully')
+
+        else:
+            return Response(status=401)
+
+class DeleteMyAccount(APIView):
+    """
+    Delete your member account. Return any borrowed books before deleting.
+    """
+    permission_classes = (IsAuthenticated,)
+
+
+    def delete(self, request,confirm_username):
+        if request.user.is_member:
+            if  Books.objects.filter(borrowed_by=request.user).count() > 0:
+                return Response(status=409, data='You have borrowed books. Return borrowed books before deleting.')
+            elif request.user.username == confirm_username:
+                get_object_or_404(User,username=request.user.username).delete()
+                return Response(status=200, data='User deleted successfully')
+            else:
+                return Response(status=400, data='username does not match.')
+        else:
+            return Response(status=401, data='Only members can delete their own account.')
+
+class BorrowedBooksList(APIView):
+    """
+    Return a list of borrowed books.
+    """
+    permission_classes= (IsAuthenticated,)
+
+
+    def get(self, request):
+        if request.user.is_member:
+
+            books = Books.objects.filter(borrowed_by=request.user)
+            serializer = BookSerializer(books, many=True)
+            return Response({"books": serializer.data})
+
+class MembersUpdate(APIView):
+    # queryset = Books.objects.all()
+    serializer_class = UserSerializer
+    permission_classes = (IsAuthenticated,)
+
+    def get(self, request, username, *args, **kwargs):
+        """
+        Retrieve a member with given username.
+        """
+
+        user = get_object_or_404(User,username=username,is_member=True)
+
+        if request.user.is_librarian:
+            serializer = UserSerializer(user)
+            return Response({'user': serializer.data})
+        else:
+            return Response(status=401)
+        
+
+    def put(self, request, username, *args, **kwargs):
+        """
+        Update details of a member with given username. Only for Librarians.
+        """
+
+        if request.user.is_librarian:
+            member = get_object_or_404(User,username=username)
+            member.username = request.data['username']
+            member.is_librarian = request.data['is_librarian']
+            member.is_member = request.data['is_member']
+            member.save()
+        else:
+            return Response(status=401)
+
+
+
+    def delete(self, request, username, format=None):
+        """
+        Delete a member with given username. Only for Librarians.
+        """
+        if request.user.is_librarian:
+            get_object_or_404(User,username=username).delete()
+        else:
+            return Response(status=401)

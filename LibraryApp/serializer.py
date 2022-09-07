@@ -32,3 +32,4 @@ class BookLibrarianSerializer(serializers.ModelSerializer):
 
 class SearchSerializer(serializers.Serializer):
     search = serializers.CharField()
+
