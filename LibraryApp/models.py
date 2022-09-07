@@ -25,10 +25,10 @@ class Books(models.Model):
     name = models.CharField(max_length=50, blank=False, null=False)
     is_borrowed = models.BooleanField(default=False)
 
-    added_by = models.ForeignKey(
+    added_by = models.OneToOneField(
         User, blank=True, null=True, on_delete=models.SET_NULL,related_name='librarian')
 
-    borrowed_by = models.ForeignKey(
+    borrowed_by = models.OneToOneField(
         User, blank=True, null=True, on_delete=models.SET_NULL, related_name='borrower')
 
     def __str__(self):

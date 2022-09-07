@@ -89,7 +89,7 @@ class BooksUpdate(APIView):
                 serializer = BookLibrarianSerializer(book)
                 return Response({'book': serializer.data})
             elif request.user.is_member:
-                serializer = BookLibrarianSerializer(book)
+                serializer = BookSerializer(book)
                 return Response({'book': serializer.data})
             else:
                 return Response(status=401)
@@ -147,3 +147,23 @@ class SearchBookList(APIView):
             return Response({"books": serializer.data})
         else:
             return Response(status=401)
+
+class BorrowBook(APIView):
+    """
+    Borrow the book with given id.
+    """
+    permission_classes = (IsAuthenticated,)
+
+    def post(self,request,pk):
+        if request.user.is_member:
+            book = Books.objects.get(pk=pk)
+            if book.is_borrowed:
+                return Response(data='Book is already borrowed',status=409)
+            else:
+
+                book.borrowed_by = request.user
+                book.is_borrowed = True
+                book.save()
+                return Response(status=200)
+        else:
+            return Response(status=401,data='Only members can borrow books')
