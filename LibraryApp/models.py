@@ -31,7 +31,7 @@ class Books(models.Model):
     name = models.CharField(max_length=50, blank=False, null=False)
     is_borrowed = models.BooleanField(default=False)
 
-    added_by = models.OneToOneField(
+    added_by = models.ForeignKey(
         User, blank=True, null=True, on_delete=models.SET_NULL,related_name='librarian')
 
     borrowed_by = models.OneToOneField(
